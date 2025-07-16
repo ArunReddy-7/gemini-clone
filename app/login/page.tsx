@@ -13,6 +13,11 @@ const LoginSchema = z.object({
 
 type LoginForm = z.infer<typeof LoginSchema>;
 
+interface Country {
+  name: string;
+  callingCodes: string[];
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [dialCodes, setDialCodes] = useState<[string, string][]>([]);
@@ -26,22 +31,21 @@ export default function LoginPage() {
     resolver: zodResolver(LoginSchema),
   });
 
-  // ✅ Correct fetch using callingCodes from v2 API
   useEffect(() => {
     const fetchDialCodes = async () => {
       try {
         const res = await fetch('https://restcountries.com/v2/all?fields=name,callingCodes');
         if (!res.ok) throw new Error('Failed to fetch country codes');
-        const data = await res.json();
+        const data: Country[] = await res.json();
 
         const codes = data
-          .flatMap((country: any) =>
-            (country.callingCodes || []).map((code: string) => ({
+          .flatMap((country) =>
+            (country.callingCodes || []).map((code) => ({
               code: `+${code.replace(/\s/g, '')}`,
               name: country.name,
             }))
           )
-          .filter(entry => entry.code && entry.code !== '+');
+          .filter((entry: { code: string }) => entry.code && entry.code !== '+');
 
         const uniqueMap = new Map<string, string>();
         codes.forEach(({ code, name }) => {
@@ -57,7 +61,7 @@ export default function LoginPage() {
         setDialCodes([
           ['+91', 'India'],
           ['+1', 'United States'],
-        ]); // fallback values
+        ]); // fallback
       }
     };
 
@@ -67,7 +71,6 @@ export default function LoginPage() {
   const onSubmit = (data: LoginForm) => {
     setLoading(true);
     setTimeout(() => {
-      // Simulate OTP validation success
       localStorage.setItem('auth', JSON.stringify(data));
       router.push('/dashboard');
     }, 1000);
